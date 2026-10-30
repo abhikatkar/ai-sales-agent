@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><title>AI Sales Agent</title>
+<style>
+  body{font-family:system-ui,sans-serif;margin:0;display:grid;grid-template-columns:1fr 1fr;height:100vh}
+  #chat,#log{overflow:auto;padding:16px}
+  #log{background:#0f172a;color:#cbd5e1;font:12px/1.4 ui-monospace,monospace}
+  .m{margin:8px 0;padding:8px 12px;border-radius:8px;white-space:pre-wrap;max-width:85%}
+  .u{background:#dbeafe;margin-left:auto}.a{background:#f1f5f9}
+  .ev{border-bottom:1px solid #1e293b;padding:6px 0}.API_CALL,.API_RESPONSE{color:#4ade80}.GUARD{color:#f87171}.DISCOUNT_STEP,.QUOTE{color:#facc15}
+  form{display:flex;gap:8px;position:sticky;bottom:0;background:#fff;padding:8px 0}
+  input{flex:1;padding:10px}
+</style>
+</head>
+<body>
+<div id="chat"><h3>Sales Agent <small id="sid"></small> <button onclick="newSession()">New chat</button></h3><div id="msgs"></div>
+<form id="f"><input id="i" placeholder="Type a message (sends immediately, even while bot is busy)" autocomplete="off"><button>Send</button></form></div>
+<div id="log"><b>API calls &amp; guard decisions</b></div>
+<script>
+let sid = 's-' + Date.now(), busy = 0;
+document.getElementById('sid').textContent = sid;
+function newSession(){ sid='s-'+Date.now(); document.getElementById('sid').textContent=sid; msgs.innerHTML=''; log.innerHTML='<b>API calls &amp; guard decisions</b>'; }
+const msgs = document.getElementById('msgs'), log = document.getElementById('log');
+function add(cls, t){ const d=document.createElement('div'); d.className='m '+cls; d.textContent=t; msgs.appendChild(d); d.scrollIntoView(); return d; }
+document.getElementById('f').onsubmit = async (e) => {
+  e.preventDefault(); const text = i.value.trim(); if(!text) return; i.value='';
+  add('u', text); const pending = add('a', '…'); busy++;
+  const r = await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sid,message:text})}).then(r=>r.json());
+  busy--;
+  pending.textContent = r.interrupted ? '(interrupted)' : r.reply;
+  for (const ev of r.events||[]) { if(ev.type==='USER'||ev.type==='ASSISTANT') continue;
+    const d=document.createElement('div'); d.className='ev '+ev.type; d.textContent=ev.type+' '+JSON.stringify(ev,null,1).slice(0,900); log.appendChild(d); d.scrollIntoView(); }
+};
+</script>
+</body>
+</html>
